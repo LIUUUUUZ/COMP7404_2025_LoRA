@@ -48,11 +48,16 @@ def get_parser():
                         help="测试预测时的iter数")
     parser.add_argument("--compare_ranks", action="store_true",
                         help="是否对比不同 LoRA rank 的影响")
-
-    # 使用方法为 python xxxx.py --lora_target q v o,必须要有至少一个, 平时默认全部使用
-    parser.add_argument("--lora_target", type=str, nargs='+',
+    
+    #使用方法为 python xxxx.py --lora_target q v o,必须要有至少一个, 平时默认全部使用
+    parser.add_argument("--lora_target", type=str, nargs='+', 
                         default=["q", "k", "v", "o"],
                         help="LoRA运用的attention目标矩阵的组合")
+    
+    # Adapter配置参数
+    parser.add_argument("--adapter", type=str, choices=["adapter_config_03M", "adapter_config_09M","adapter_config"],
+                        default="adapter_config", help="adapter参数")
+
 
     # Adapter配置参数
     parser.add_argument("--adapter", type=str, choices=["adapter_config_03M", "adapter_config_09M", "adapter_config"],

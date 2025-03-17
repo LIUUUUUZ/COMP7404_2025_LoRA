@@ -114,6 +114,7 @@ def load_and_preprocess_data(args):
             with_indices=True,
             batched=True,
             # input_columns=["idx"]
+
         )
     # elif args.dataset == "stsb":
     #     tokenized_datasets = tokenized_datasets.map(
@@ -160,7 +161,6 @@ def load_and_preprocess_data(args):
         )
 
     return train_dataloader, eval_dataloader, num_labels, metric_name
-
 
 def configure_adapter(model, args):
     """配置Adapter参数"""
@@ -219,7 +219,6 @@ def configure_adapter(model, args):
     else:
         raise ValueError(f"Unsupported adapter config: {args.adapter}")
 
-
 def load_model(args, num_labels):
     """根据方法加载模型, 并根据需要应用LoRA或Adapter."""
     model = AutoModelForSequenceClassification.from_pretrained(
@@ -228,17 +227,32 @@ def load_model(args, num_labels):
     )
 
     if args.method == "lora":
+            #         # 注意力模块
+            # "query",
+            # "key",
+            # "value",
+            # "attention.output.dense",
+            # # FFN模块
+            # "intermediate.dense",
+            # "output.dense",
+            # # 分类头
+            # "classifier.dense",
+            # "classifier.out_proj"
         # 配置LoRA
         target_modules = []
-        for target in args.lora_target:
-            if target == "q":
-                target_modules.append("query")
-            elif target == "k":
-                target_modules.append("key")
-            elif target == "v":
-                target_modules.append("value")
-            # elif target == "o":
-            #     target_modules.append("output")
+        if "q" in args.lora_target:
+            target_modules.append("query")
+        if "k" in args.lora_target:
+            target_modules.append("key")
+        if "v" in args.lora_target:
+            target_modules.append("value")
+        if "o" in args.lora_target:
+            target_modules.append("attention.output.dense")
+            target_modules.append("output.dense") 
+            target_modules.append("intermediate.dense") 
+
+        target_modules.append("classifier.dense")
+        target_modules.append("classifier.out_proj")
 
         lora_config = LoraConfig(
             r=args.lora_rank,
@@ -246,21 +260,33 @@ def load_model(args, num_labels):
             lora_dropout=args.lora_dropout,
             target_modules=target_modules,
             bias="none",
-            task_type=TaskType.SEQ_CLS
+            task_type=TaskType.SEQ_CLS,
+            inference_mode=False,
+            init_lora_weights=True,
+            modules_to_save=None  # 不需要特别保存模块，因为我们已经在target_modules中包含了分类器
         )
 
+
+        print("LoRA配置:")
+        print(f"目标模块: {target_modules}")
+        print(f"LoRA秩: {args.lora_rank}")
+        print(f"LoRA alpha: {args.lora_alpha}")
+        
         # 应用LoRA配置
         model = get_peft_model(model, lora_config)
+        
+        # 打印可训练参数信息
+        model.print_trainable_parameters()
 
     elif args.method == "adapter":
         # 使用Adapter配置
         model = configure_adapter(model, args)
-
     elif args.method == "full_ft":
         for param in model.parameters():
             param.requires_grad = True
         trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         all_params = sum(p.numel() for p in model.parameters())
+        
         print(f"Full fine-tuning - 可训练参数: {trainable_params} ({trainable_params / all_params:.2%})")
 
     else:
@@ -294,6 +320,7 @@ def train(args, model, train_dataloader, eval_dataloader, metric_name):
     # 计算可训练参数
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     all_params = sum(p.numel() for p in model.parameters())
+    
     print(f"可训练参数: {trainable_params} ({trainable_params / all_params:.2%} of all parameters)")
 
     # 准备优化器和调度器
@@ -302,6 +329,15 @@ def train(args, model, train_dataloader, eval_dataloader, metric_name):
         lr=args.learning_rate,
         weight_decay=args.weight_decay
     )
+
+    
+    # 设置损失函数
+    if args.dataset == "snli":
+        # 分类任务使用交叉熵损失
+        criterion = torch.nn.CrossEntropyLoss()
+    elif args.dataset == "stsb":
+        # 回归任务使用MSE损失，并进行标准化
+        criterion = torch.nn.MSELoss()
 
     total_steps = len(train_dataloader) * args.num_epochs
     warmup_steps = int(total_steps * args.warmup_ratio)
@@ -319,7 +355,6 @@ def train(args, model, train_dataloader, eval_dataloader, metric_name):
     for epoch in range(args.num_epochs):
         print(f"Epoch {epoch + 1}/{args.num_epochs}")
         epoch_start_time = time.time()
-
         progress_bar = tqdm(train_dataloader, desc="训练")
         for batch in progress_bar:
             batch = {k: v.to(device) for k, v in batch.items()}
@@ -334,6 +369,7 @@ def train(args, model, train_dataloader, eval_dataloader, metric_name):
             optimizer.zero_grad()
 
             progress_bar.set_postfix({"loss": loss.item()})
+
 
         epoch_time = time.time() - epoch_start_time
         total_train_time += epoch_time
@@ -457,11 +493,14 @@ def evaluate(args, model, eval_dataloader, metric_name, predict=False):
                 predictions = outputs.logits.squeeze()
 
             all_preds.extend(predictions.cpu().numpy())
-            all_labels.extend(batch["labels"].cpu().numpy())
-
+            all_labels.extend(batch["labels"].float().cpu().numpy())
+    
     all_preds = np.array(all_preds)
     all_labels = np.array(all_labels)
 
+    # print(predictions)
+    # print(batch["labels"])
+    
     metrics = compute_metrics(all_preds, all_labels, metric_name)
     eval_time = time.time() - start_time
 
@@ -518,7 +557,6 @@ def run_experiments(args):
         # 如果需要输出矩阵
         if args.output_matrices and args.method == "lora":
             output_lora_matrices(model, args)
-
 
 def run_lora_experiments(args, train_dataloader, eval_dataloader, num_labels, metric_name):
     """测试不同 LoRA Rank 对训练时间和评估性能的影响"""
