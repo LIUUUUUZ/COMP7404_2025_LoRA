@@ -34,7 +34,7 @@ def get_parser():
 
     parser.add_argument("--time_count", action="store_true",
                         help="是否计时")
-    parser.add_argument("--mode", type=str, choices=["train", "eval", "ag_news"], default="train",
+    parser.add_argument("--mode", type=str, choices=["train", "eval], default="train",
                         help="选择训练或评估模式")
 
     # LoRA微调参数（若不完善请修改删减增补）
