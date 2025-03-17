@@ -59,10 +59,6 @@ def get_parser():
                         default="adapter_config", help="adapter参数")
 
 
-    # Adapter配置参数
-    parser.add_argument("--adapter", type=str, choices=["adapter_config_03M", "adapter_config_09M", "adapter_config"],
-                        default="adapter_config", help="adapter参数")
-
     # 模型储存相关（若不完善请修改删减增补）
     parser.add_argument("--output_dir", type=str, default="./outputs",
                         help="保存输出的目录")
