@@ -34,6 +34,14 @@ def load_model(args, num_labels):
 	"""根据方法加载模型, 并根据需要应用LoRA或Adapter."""
 	if args.method == "adapter":
 		model = AutoAdapterModel.from_pretrained(args.model_name)
+		model.add_classification_head(
+			head_name="task_head",
+			num_labels=num_labels
+		)
+		# 显式解冻分类头
+		for param in model.heads["task_head"].parameters():
+			param.requires_grad = False
+
 	else:
 		model = AutoModelForSequenceClassification.from_pretrained(
 			args.model_name,
@@ -352,18 +360,18 @@ def configure_lora(model, args):
 
 def configure_adapter(model, args):
 	"""配置Adapter参数"""
-	model.add_classification_head(
-		head_name="task_head",
-		num_labels=num_labels
-	)
-	# 显式解冻分类头
-	for param in model.heads["task_head"].parameters():
-		param.requires_grad = True
+
+	if args.model_name == "roberta-base":
+		hidden_dim = 768
+	elif args.model_name == "roberta-large":
+		hidden_dim = 1024
+	else:
+		raise Exception
 
 	adapter_config = AdapterConfig.load(
 		"houlsby",
 		# 降维因子越大, 参数量越小
-		reduction_factor=1024 / args.adapter_bottleneck,
+		reduction_factor=hidden_dim / args.adapter_bottleneck,
 		target_modules=[
 			"attention.output",
 			"output.output"

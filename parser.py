@@ -57,7 +57,7 @@ def get_parser():
 	# Adapter配置参数
 	parser.add_argument("--adapter_LN", type=bool, default="true",
 	                    help="是否添加LN层")
-	parser.add_argument("--adapter_bottleneck", type=int, default=8,
+	parser.add_argument("--adapter_bottleneck", type=int, default=3,
 	                    help="adapter隐藏层维度")
 
 	# 模型储存相关（若不完善请修改删减增补）
