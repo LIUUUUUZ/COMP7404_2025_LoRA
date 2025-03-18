@@ -15,7 +15,7 @@ def get_parser():
                         help="评估Batch大小")
 
     # 模型基础部分（若不完善请修改删减增补）
-    parser.add_argument("--model_name", type=str, default="roberta-base",
+    parser.add_argument("--model_name", type=str, default="roberta-large", choices=["roberta-large", "roberta-base"],
                         help="底层模型名称")
     parser.add_argument("--method", type=str, choices=["lora", "adapter", "full_ft"], default="lora",
                         help="微调方法名称")
@@ -33,7 +33,7 @@ def get_parser():
                         help="随机种子")
 
     parser.add_argument("--time_count", action="store_true",
-                        help="是否计时")
+                        help="是否计时(每个阶段的详细时间)")
     parser.add_argument("--mode", type=str, choices=["train", "eval"], default="train",
                         help="选择训练或评估模式")
 
