@@ -94,39 +94,36 @@ def output_lora_matrices(model, args):
 	# 遍历所有LoRA层
 	for name, module in model.named_modules():
 		if hasattr(module, 'lora_A') and hasattr(module, 'lora_B'):
+			print(f"\n保存模块 {name} 的权重...")
+			
 			# 获取原始权重
-			original_weight = module.weight.detach().cpu().numpy()
-
+			original_weight = module.base_layer.weight.detach().cpu().numpy()
+			
 			# 获取LoRA权重
-			lora_A = module.lora_A.detach().cpu().numpy()
-			lora_B = module.lora_B.detach().cpu().numpy()
-
+			lora_A = module.lora_A['default'].weight.detach().cpu().numpy()
+			lora_B = module.lora_B['default'].weight.detach().cpu().numpy()
+			
 			# 计算LoRA增量
-			lora_weight = (lora_B @ lora_A) * (
-				module.scaling if hasattr(module, 'scaling') else module.lora_alpha / module.r)
+			lora_weight = (lora_B @ lora_A)
 
-			# 保存矩阵
-			original_path = os.path.join(matrices_dir, f"{name.replace('.', '_')}_original.npy")
-			lora_A_path = os.path.join(matrices_dir, f"{name.replace('.', '_')}_lora_A.npy")
-			lora_B_path = os.path.join(matrices_dir, f"{name.replace('.', '_')}_lora_B.npy")
-			lora_weight_path = os.path.join(matrices_dir, f"{name.replace('.', '_')}_lora_weight.npy")
-
-			np.save(original_path, original_weight)
-			np.save(lora_A_path, lora_A)
-			np.save(lora_B_path, lora_B)
-			np.save(lora_weight_path, lora_weight)
-
-			# 收集矩阵信息
+			# 保存矩阵为numpy文件
+			layer_name = name.replace(".", "_")
+			np.save(os.path.join(matrices_dir , layer_name+'_original_weight.npy'), original_weight)
+			np.save(os.path.join(matrices_dir , layer_name+'_lora_A.npy'), lora_A)
+			np.save(os.path.join(matrices_dir , layer_name+'_lora_B.npy'), lora_B)
+			np.save(os.path.join(matrices_dir , layer_name+'_lora_weight.npy'), lora_weight)
+			
+			# 保存配置信息
 			matrix_info = {
-				"name": name,
-				"shape_original": original_weight.shape,
-				"shape_lora_A": lora_A.shape,
-				"shape_lora_B": lora_B.shape,
-				"shape_lora_weight": lora_weight.shape,
-				"path_original": original_path,
-				"path_lora_A": lora_A_path,
-				"path_lora_B": lora_B_path,
-				"path_lora_weight": lora_weight_path
+				'module_name': name,
+				'original_shape': original_weight.shape,
+				'original_weight_path': os.path.join(matrices_dir, f"{name.replace('.', '_')}_original_weight.npy"),
+				'lora_A_shape': lora_A.shape,
+				'lora_A_path': os.path.join(matrices_dir, f"{name.replace('.', '_')}_lora_A.npy"),
+				'lora_B_shape': lora_B.shape,
+				'lora_B_path': os.path.join(matrices_dir, f"{name.replace('.', '_')}_lora_B.npy"),
+				'lora_rank': module.r,
+				'lora_weight_path': os.path.join(matrices_dir, f"{name.replace('.', '_')}_lora_weight.npy"),
 			}
 			all_matrices_info.append(matrix_info)
 
@@ -243,6 +240,7 @@ def train(args, model, train_dataloader, eval_dataloader, metric_name):
 	best_metric = 0.0
 
 	for epoch in range(args.num_epochs):
+		model.train()
 		print(f"Epoch {epoch + 1}/{args.num_epochs}")
 		epoch_start_time = time.time()
 		progress_bar = tqdm(train_dataloader, desc="训练")
