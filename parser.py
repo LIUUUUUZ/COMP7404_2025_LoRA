@@ -65,7 +65,8 @@ def get_parser():
 	                    help="保存输出的目录")
 	parser.add_argument("--save_model", action="store_true",
 	                    help="是否保存训练好的模型")
-
+	parser.add_argument("--save_log", action="store_true",
+	                    help="是否保存训练日志")
 	parser.add_argument("--output_matrices", action="store_true",
 	                    help="是否输出预训练矩阵和LoRA微调后的矩阵")
 

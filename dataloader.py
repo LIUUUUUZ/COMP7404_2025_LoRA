@@ -107,7 +107,7 @@ def load_and_preprocess_data(args):
         collate_fn=data_collator,
     )
 
-    if args.dataset == "snli":
+    if args.dataset == "mnli":
         eval_dataloader = DataLoader(
             tokenized_datasets["validation_matched"],
             batch_size=args.eval_batch_size,

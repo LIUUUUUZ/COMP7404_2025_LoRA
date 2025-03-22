@@ -19,6 +19,7 @@ from transformers import (
 )
 from adapters import AutoAdapterModel, AdapterConfig
 from tqdm import tqdm
+import logging
 
 
 def set_seed(seed):
@@ -32,6 +33,8 @@ def set_seed(seed):
 
 def load_model(args, num_labels):
 	"""根据方法加载模型, 并根据需要应用LoRA或Adapter."""
+	logger = logging.getLogger('COMP_7404_LoRA')
+	
 	if args.method == "adapter":
 		model = AutoAdapterModel.from_pretrained(args.model_name)
 		model.add_classification_head(
@@ -49,11 +52,10 @@ def load_model(args, num_labels):
 		)
 
 	if args.method == "lora":
-
 		lora_config = configure_lora(model, args)
 
-		print("LoRA配置:")
-		print(lora_config)
+		logger.info("LoRA配置:")
+		logger.info(str(lora_config))
 
 		# 应用LoRA配置
 		model = get_peft_model(model, lora_config)
@@ -71,7 +73,7 @@ def load_model(args, num_labels):
 		trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 		all_params = sum(p.numel() for p in model.parameters())
 
-		print(f"Full fine-tuning - 可训练参数: {trainable_params} ({trainable_params / all_params:.2%})")
+		logger.info(f"Full fine-tuning - 可训练参数: {trainable_params} ({trainable_params / all_params:.2%})")
 
 	else:
 		raise ValueError(f"不支持的方法 {args.method}.")
@@ -81,7 +83,8 @@ def load_model(args, num_labels):
 
 def output_lora_matrices(model, args):
 	"""输出预训练矩阵和LoRA微调后的矩阵."""
-	print("正在保存预训练矩阵和LoRA微调后的矩阵...")
+	logger = logging.getLogger('COMP_7404_LoRA')
+	logger.info("正在保存预训练矩阵和LoRA微调后的矩阵...")
 	matrices_dir = os.path.join(
 		args.output_dir,
 		f"{args.dataset}_{args.method}_rank{args.lora_rank}_matrices"
@@ -94,7 +97,7 @@ def output_lora_matrices(model, args):
 	# 遍历所有LoRA层
 	for name, module in model.named_modules():
 		if hasattr(module, 'lora_A') and hasattr(module, 'lora_B'):
-			print(f"\n保存模块 {name} 的权重...")
+			logger.info(f"\n保存模块 {name} 的权重...")
 			
 			# 获取原始权重
 			original_weight = module.base_layer.weight.detach().cpu().numpy()
@@ -132,8 +135,8 @@ def output_lora_matrices(model, args):
 	with open(os.path.join(matrices_dir, "matrices_index.json"), "w") as f:
 		json.dump(all_matrices_info, f, indent=2)
 
-	print(f"矩阵已保存到 {matrices_dir}")
-	print(f"矩阵索引文件已保存到 {os.path.join(matrices_dir, 'matrices_index.json')}")
+	logger.info(f"矩阵已保存到 {matrices_dir}")
+	logger.info(f"矩阵索引文件已保存到 {os.path.join(matrices_dir, 'matrices_index.json')}")
 
 
 def evaluate(args, model, eval_dataloader, metric_name, predict=False):
@@ -196,6 +199,8 @@ def compute_metrics(preds, labels, metric_name):
 
 def train(args, model, train_dataloader, eval_dataloader, metric_name):
 	"""训练模型."""
+	logger = logging.getLogger('COMP_7404_LoRA')
+	
 	if torch.cuda.is_available():
 		device = torch.device("cuda")
 	elif torch.backends.mps.is_available():
@@ -211,13 +216,13 @@ def train(args, model, train_dataloader, eval_dataloader, metric_name):
 
 	if args.time_count:
 		model_load_time = time.time() - model_load_start
-		print(f"模型加载到{device}耗时: {model_load_time:.2f}秒")
+		logger.info(f"模型加载到{device}耗时: {model_load_time:.2f}秒")
 
 	# 计算可训练参数
 	trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 	all_params = sum(p.numel() for p in model.parameters())
 
-	print(f"可训练参数: {trainable_params} ({trainable_params / all_params:.2%} of all parameters)")
+	logger.info(f"可训练参数: {trainable_params} ({trainable_params / all_params:.2%} of all parameters)")
 
 	# 准备优化器和调度器
 	optimizer = torch.optim.AdamW(
@@ -241,7 +246,7 @@ def train(args, model, train_dataloader, eval_dataloader, metric_name):
 
 	for epoch in range(args.num_epochs):
 		model.train()
-		print(f"Epoch {epoch + 1}/{args.num_epochs}")
+		logger.info(f"Epoch {epoch + 1}/{args.num_epochs}")
 		epoch_start_time = time.time()
 		progress_bar = tqdm(train_dataloader, desc="训练")
 
@@ -290,20 +295,20 @@ def train(args, model, train_dataloader, eval_dataloader, metric_name):
 
 		# 输出本轮次的计时详情
 		if args.time_count:
-			print(f"Epoch {epoch + 1} 计时详情:")
-			print(f"  数据传输总耗时: {data_transfer_time:.2f}秒")
-			print(f"  前向传播总耗时: {forward_time:.2f}秒")
-			print(f"  反向传播总耗时: {backward_time:.2f}秒")
-			print(f"  优化器步骤总耗时: {optimizer_time:.2f}秒")
+			logger.info(f"Epoch {epoch + 1} 计时详情:")
+			logger.info(f"  数据传输总耗时: {data_transfer_time:.2f}秒")
+			logger.info(f"  前向传播总耗时: {forward_time:.2f}秒")
+			logger.info(f"  反向传播总耗时: {backward_time:.2f}秒")
+			logger.info(f"  优化器步骤总耗时: {optimizer_time:.2f}秒")
 
 		epoch_time = time.time() - epoch_start_time
 		total_train_time += epoch_time
-		print(f"Epoch {epoch + 1} 完成，耗时 {epoch_time:.2f} 秒。")
+		logger.info(f"Epoch {epoch + 1} 完成，耗时 {epoch_time:.2f} 秒。")
 
 		# 评估
 		eval_result, eval_time = evaluate(args, model, eval_dataloader, metric_name, predict=False)
-		print(f"评估完成，耗时 {eval_time:.2f} 秒。")
-		print(f"评估结果: {eval_result}")
+		logger.info(f"评估完成，耗时 {eval_time:.2f} 秒。")
+		logger.info(f"评估结果: {eval_result}")
 
 		# 保存最佳模型
 		if args.save_model:
@@ -316,7 +321,7 @@ def train(args, model, train_dataloader, eval_dataloader, metric_name):
 				)
 				os.makedirs(output_dir, exist_ok=True)
 				model.save_pretrained(output_dir)
-				print(f"模型已保存到 {output_dir}")
+				logger.info(f"模型已保存到 {output_dir}")
 
 	# 如果需要输出矩阵
 	if args.output_matrices and args.method == "lora":

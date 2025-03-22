@@ -20,17 +20,21 @@ from peft import (
 	PeftModel
 )
 from experiments import run_experiments
+from logger import setup_logger
 
 
 def main():
 	args = parse_args()
 
+	# 设置日志
+	logger = setup_logger(args)
+	
 	start_time = time.time()
 
 	run_experiments(args)
 
 	total_time = time.time() - start_time
-	print(f"总执行时间: {total_time:.2f} 秒")
+	logger.info(f"总执行时间: {total_time:.2f} 秒")
 
 
 if __name__ == "__main__":
