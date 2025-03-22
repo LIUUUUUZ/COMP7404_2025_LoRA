@@ -10,7 +10,8 @@ from peft import (
 )
 from model import set_seed, load_model, train, evaluate
 from dataloader import load_and_preprocess_data
-
+import json
+import numpy as np
 
 def run_experiments(args):
 	"""根据参数运行实验."""
@@ -102,10 +103,13 @@ def run_lora_experiments(args, train_dataloader, eval_dataloader, num_labels, me
 	df.to_csv("lora_rank_comparison.csv", index=False)
 	print("LoRA Rank 影响实验结果已保存到 lora_rank_comparison.csv")
 
-
+def numpy_to_python(obj):
+    if isinstance(obj, np.float32):
+        return float(obj)
+    return obj
 
 def run_weight_matrix_comb_with_rank_experiment(args):
-	dataset_list = ["stsb", "snli", "ag_news"]
+	dataset_list = ["stsb", "ag_news"]
 	lora_rank = [1, 2, 4, 8, 32]
 	lora_target = ["k","v","q","o","kv","qv","kvq","kvqo"]
 
@@ -169,9 +173,12 @@ def run_weight_matrix_comb_with_rank_experiment(args):
 				print(f"实验结果: {metrics}")
 				print(f"评估时间: {eval_time:.2f} 秒")
 				print(f"可训练参数数量: {trainable_params}")
-	
+
+				with open("lora_experiments_results.json", "w") as f:
+					json.dump(results, f, ensure_ascii=False, indent=4, default=numpy_to_python)
+
 	# 保存实验结果
 	df = pd.DataFrame(results)
 	output_file = "lora_weight_matrix_rank_experiments.csv"
 	df.to_csv(output_file, index=False)
-	print(f"\n实验结果已保存到 {output_file}")
+	print(f"\n实验结果已保存到 {output_file}")	

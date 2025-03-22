@@ -5,7 +5,7 @@ def get_parser():
 	parser = argparse.ArgumentParser(description="COMP_7404_2025_spring_LoRA项目")
 
 	# 数据集部分（若不完善请修改删减增补）
-	parser.add_argument("--dataset", type=str, choices=["snli", "stsb", "ag_news"], default="snli",
+	parser.add_argument("--dataset", type=str, choices=["snli", "stsb", "ag_news"], default="stsb",
 	                    help="数据集名称")
 	parser.add_argument("--max_seq_length", type=int, default=128,
 	                    help="最大序列长度")
@@ -19,11 +19,11 @@ def get_parser():
 	                    help="底层模型名称")
 	parser.add_argument("--method", type=str, choices=["lora", "adapter", "full_ft"], default="lora",
 	                    help="微调方法名称")
-	parser.add_argument("--learning_rate", type=float, default=1e-4,
+	parser.add_argument("--learning_rate", type=float, default=2e-4,
 	                    help="训练的学习率")
 	parser.add_argument("--weight_decay", type=float, default=0.01,
 	                    help="正则化的权重衰减")
-	parser.add_argument("--num_epochs", type=int, default=5,
+	parser.add_argument("--num_epochs", type=int, default=10,
 	                    help="训练的轮数")
 	parser.add_argument("--warmup_ratio", type=float, default=0.06,
 	                    help="学习率调度器的warmup步骤比例, 本次实验中不考虑")
