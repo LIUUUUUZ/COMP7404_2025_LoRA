@@ -23,7 +23,7 @@ def get_parser():
 	                    help="训练的学习率")
 	parser.add_argument("--weight_decay", type=float, default=0.01,
 	                    help="正则化的权重衰减")
-	parser.add_argument("--num_epochs", type=int, default=10,
+	parser.add_argument("--num_epochs", type=int, default=5,
 	                    help="训练的轮数")
 	parser.add_argument("--warmup_ratio", type=float, default=0.06,
 	                    help="学习率调度器的warmup步骤比例, 本次实验中不考虑")
@@ -46,8 +46,7 @@ def get_parser():
 	                    help="LoRA层Dropout概率, 本次实验中不考虑, 默认为0.1")
 	parser.add_argument("--test_iters", type=int, default=100,
 	                    help="测试预测时的iter数")
-	parser.add_argument("--compare_ranks", action="store_true",
-	                    help="是否对比不同 LoRA rank 的影响")
+
 
 	# 使用方法为 python xxxx.py --lora_target q v o,必须要有至少一个, 平时默认全部使用
 	parser.add_argument("--lora_target", type=str, nargs='+',
@@ -68,6 +67,10 @@ def get_parser():
 
 	parser.add_argument("--output_matrices", action="store_true",
 	                    help="是否输出预训练矩阵和LoRA微调后的矩阵")
+	
+	# 实验相关
+	parser.add_argument("--compare_ranks", action="store_true", help="是否对比不同 LoRA rank 的影响")
+	parser.add_argument("--test_weight_matrix_comb_with_rank", action="store_true", help="lora在不同权重矩阵和秩下的结果测试")
 
 	return parser
 

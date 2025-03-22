@@ -11,9 +11,13 @@ def load_and_preprocess_data(args):
     """加载并预处理数据集."""
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
+    # 设置填充标记
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
     if args.dataset == "snli":
         dataset = load_dataset("snli")
-        # SNLI也类似于MNLI，具有3个标签
+        # SNLI有3个标签
         num_labels = 3
         metric_name = "accuracy"
 
@@ -98,7 +102,7 @@ def load_and_preprocess_data(args):
     tokenized_datasets.set_format("torch")
 
     # 创建DataLoader
-    data_collator = DataCollatorWithPadding(tokenizer=tokenizer, return_tensors="pt")
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     train_dataloader = DataLoader(
         tokenized_datasets["train"],
@@ -107,9 +111,9 @@ def load_and_preprocess_data(args):
         collate_fn=data_collator,
     )
 
-    if args.dataset == "snli":
+    if args.dataset == "snli" or args.dataset == "stsb":
         eval_dataloader = DataLoader(
-            tokenized_datasets["validation_matched"],
+            tokenized_datasets["validation"],
             batch_size=args.eval_batch_size,
             collate_fn=data_collator,
         )
@@ -119,11 +123,6 @@ def load_and_preprocess_data(args):
             batch_size=args.eval_batch_size,
             collate_fn=data_collator,
         )
-    else:
-        eval_dataloader = DataLoader(
-            tokenized_datasets["validation"],
-            batch_size=args.eval_batch_size,
-            collate_fn=data_collator,
-        )
+
 
     return train_dataloader, eval_dataloader, num_labels, metric_name

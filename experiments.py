@@ -19,12 +19,17 @@ def run_experiments(args):
 	# 创建输出目录
 	os.makedirs(args.output_dir, exist_ok=True)
 
+
 	# 加载数据
-	train_dataloader, eval_dataloader, num_labels, metric_name = load_and_preprocess_data(args)
+	if not args.test_weight_matrix_comb_with_rank:
+		train_dataloader, eval_dataloader, num_labels, metric_name = load_and_preprocess_data(args)
 
 	if args.mode == "train":
 		if args.method == "lora" and args.compare_ranks:
 			run_lora_experiments(args, train_dataloader, eval_dataloader, num_labels, metric_name)
+
+		elif args.test_weight_matrix_comb_with_rank:
+			run_weight_matrix_comb_with_rank_experiment(args)
 
 		else:
 			# 加载模型
@@ -96,3 +101,77 @@ def run_lora_experiments(args, train_dataloader, eval_dataloader, num_labels, me
 	df = pd.DataFrame(results)
 	df.to_csv("lora_rank_comparison.csv", index=False)
 	print("LoRA Rank 影响实验结果已保存到 lora_rank_comparison.csv")
+
+
+
+def run_weight_matrix_comb_with_rank_experiment(args):
+	dataset_list = ["stsb", "snli", "ag_news"]
+	lora_rank = [1, 2, 4, 8, 32]
+	lora_target = ["k","v","q","o","kv","qv","kvq","kvqo"]
+
+	results = []
+	'''
+	每个实验记录：{
+	dataset:,
+	lora_rank:,
+	lora_target:,
+	parameters:,
+	total_training_time:,
+	eval_time:,
+	metric_name:,
+	result:,
+	}
+	'''
+
+	for dataset in dataset_list:
+		args.dataset = dataset
+		print(f"\n开始数据集 {args.dataset} 的实验...")
+		train_dataloader, eval_dataloader, num_labels, metric_name = load_and_preprocess_data(args)
+
+		for rank in lora_rank:
+			args.lora_rank = rank
+			for target in lora_target:
+				print(f"\n运行实验: 数据集={args.dataset}, LoRA rank={args.lora_rank}, 目标矩阵={args.lora_target}")
+				
+				# 将字符串转换为列表形式的目标矩阵
+				if isinstance(target, str):
+					args.lora_target = list(target)
+				else:
+					args.lora_target = target
+					
+				# 加载模型
+				model = load_model(args, num_labels)
+
+				
+				# 训练模型并记录训练时间
+				train_time = train(args, model, train_dataloader, eval_dataloader, metric_name)
+
+				
+				# 计算可训练参数数量
+				trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+				
+				# 评估模型
+				metrics, eval_time = evaluate(args, model, eval_dataloader, metric_name)
+				
+				# 记录实验结果
+				result = {
+					"dataset": dataset,
+					"lora_rank": rank,
+					"lora_target": "".join(args.lora_target),
+					"parameters": trainable_params,
+					"total_train_time": train_time ,
+					"eval_time": eval_time,
+					"metric_name": metric_name,
+					"result": list(metrics.values())[0]
+				}
+				results.append(result)
+				
+				print(f"实验结果: {metrics}")
+				print(f"评估时间: {eval_time:.2f} 秒")
+				print(f"可训练参数数量: {trainable_params}")
+	
+	# 保存实验结果
+	df = pd.DataFrame(results)
+	output_file = "lora_weight_matrix_rank_experiments.csv"
+	df.to_csv(output_file, index=False)
+	print(f"\n实验结果已保存到 {output_file}")
