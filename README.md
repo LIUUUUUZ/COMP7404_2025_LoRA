@@ -27,6 +27,9 @@
 * 2025.3.19 Adapter微调上线，可调参数为: --adapter_LN 是否添加adapter中的LN层， --adapter_bottleneck adapter层中的隐藏维度，用于调整参数。
 * 2025.3.19 lora微调权重保存功能上线，修复部分训练bug，至此基础代码部分基本完工，可以开始后续的实验。
 
+* 2025.3.22 更新lora在不同权重矩阵和秩下的结果测试，通过--test_weight_matrix_comb_with_rank调用。
+* 2025.3.22 修改默认epoch到5，因算力问题移除snli数据集，最终确定实验数据集为stsb和ag_news。
+
 #### 项目运行
 ```
 python train.py --dataset snli --max_seq_length 128 --batch_size 32 --eval_batch_size 64 --model_name roberta-large --method lora --learning_rate 1e-4 --weight_decay 0.01 --num_epochs 10 --warmup_ratio 0.06 --gradient_accumulation_steps 1 --seed 42 --time_count --mode train --lora_rank 3--lora_alpha 16 --lora_dropout 0.1 --test_iters 100 --compare_ranks --lora_target q k v o --adapter_LN true --adapter_bottleneck 3 --output_dir ./outputs --save_model --output_matrices
