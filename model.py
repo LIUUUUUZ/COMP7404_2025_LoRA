@@ -58,6 +58,11 @@ def load_model(args, num_labels):
 		# 应用LoRA配置
 		model = get_peft_model(model, lora_config)
 
+		# 手动冻结所有未包含lora的module
+		for name, param in model.named_parameters():
+			if "lora" not in name:
+				param.requires_grad = False
+
 		# 打印可训练参数信息
 		model.print_trainable_parameters()
 
@@ -217,11 +222,16 @@ def train(args, model, train_dataloader, eval_dataloader, metric_name):
 	trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 	all_params = sum(p.numel() for p in model.parameters())
 
+	# 测试是否除lora还有其他的参数解冻了
+	for name, param in model.named_parameters():
+		if "lora" not in name:
+			assert not param.requires_grad, f"参数泄露：{name}"
+
 	print(f"可训练参数: {trainable_params} ({trainable_params / all_params:.2%} of all parameters)")
 
 	# 准备优化器和调度器
 	optimizer = torch.optim.AdamW(
-		model.parameters(),
+		filter(lambda p: p.requires_grad, model.parameters()),
 		lr=args.learning_rate,
 		weight_decay=args.weight_decay
 	)
@@ -336,7 +346,7 @@ def configure_lora(model, args):
 		target_modules.append("value")
 	if "o" in args.lora_target:
 		# target_modules.append("attention.output.dense")
-		target_modules.append("output.dense")
+		target_modules.append("attention.output.dense")
 	# target_modules.append("intermediate.dense")
 
 	# target_modules.append("classifier.dense")
