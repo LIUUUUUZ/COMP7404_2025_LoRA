@@ -166,7 +166,8 @@ def run_weight_matrix_comb_with_rank_experiment(args):
 					"total_train_time": train_time ,
 					"eval_time": eval_time,
 					"metric_name": metric_name,
-					"result": list(metrics.values())[0]
+					"result": list(metrics.values())[0],
+					"num_epochs": args.num_epochs
 				}
 				results.append(result)
 				
