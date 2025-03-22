@@ -2,7 +2,7 @@
 此仓库储存的是2025春季COMP7404的项目，主题为验证LoRA微调方式的有效性以及论文中提出的部分优势       
 核心论文为：[LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685)        
 ~~测试使用的底层模型为：[RoBERTa base model](https://huggingface.co/FacebookAI/roberta-base)， 模型参数为：125M params~~      
-测试使用的底层模型为：[RoBERTa large model](https://huggingface.co/FacebookAI/roberta-large)， 模型参数为：355M params
+测试使用的底层模型为：[RoBERTa large model](https://huggingface.co/FacebookAI/roberta-large)， 模型参数为：355M params       
 项目成员：刘知闲(组长), 田潇文，张维轩， 张哲      
 #### 2025.3.1  项目分工
 1. 理解并加载MNLI matched，STSB两个数据集，若发现更优的测试集可以改成对应数据集，并同时负责DataLoader的编写及loss function的编写，最后辅助其他部分的同学进行训练时数据的使用. (田潇文)
