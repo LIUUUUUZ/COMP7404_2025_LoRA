@@ -12,6 +12,8 @@ from model import set_seed, load_model, train, evaluate
 from dataloader import load_and_preprocess_data
 import json
 import numpy as np
+import torch
+import gc
 
 def run_experiments(args):
 	"""根据参数运行实验."""
@@ -136,6 +138,10 @@ def run_weight_matrix_comb_with_rank_experiment(args):
 			args.lora_rank = rank
 			for target in lora_target:
 				print(f"\n运行实验: 数据集={args.dataset}, LoRA rank={args.lora_rank}, 目标矩阵={args.lora_target}")
+				# 实验开始时清除上一个模型的缓存
+				if torch.cuda.is_available():
+					torch.cuda.empty_cache()
+				gc.collect()  # 清理内存中的未使用对象
 				
 				# 将字符串转换为列表形式的目标矩阵
 				if isinstance(target, str):
