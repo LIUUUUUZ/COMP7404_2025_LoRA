@@ -33,6 +33,8 @@
 
 * 2025.3.23 凌晨修复重大问题，曾经有部分非lora参数(分类层)错误解冻导致参数量异常且不随lora设置的改变出现正常的比例增减，目前通过手动添加层锁定已经解决。
 
+* 2025.3.23 修复全参数微调无法运行的问题，原因是全参微调时学习率2*e-4太大导致训练失衡，预测效果极差。
+
 #### 项目运行
 ```
 python train.py --dataset snli --max_seq_length 128 --batch_size 32 --eval_batch_size 64 --model_name roberta-large --method lora --learning_rate 1e-4 --weight_decay 0.01 --num_epochs 10 --warmup_ratio 0.06 --gradient_accumulation_steps 1 --seed 42 --time_count --mode train --lora_rank 3--lora_alpha 16 --lora_dropout 0.1 --test_iters 100 --compare_ranks --lora_target q k v o --adapter_LN true --adapter_bottleneck 3 --output_dir ./outputs --save_model --output_matrices
