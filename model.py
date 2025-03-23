@@ -223,9 +223,10 @@ def train(args, model, train_dataloader, eval_dataloader, metric_name):
 	all_params = sum(p.numel() for p in model.parameters())
 
 	# 测试是否除lora还有其他的参数解冻了
-	for name, param in model.named_parameters():
-		if "lora" not in name:
-			assert not param.requires_grad, f"参数泄露：{name}"
+	if args.method == "lora":
+		for name, param in model.named_parameters():
+			if "lora" not in name:
+				assert not param.requires_grad, f"参数泄露：{name}"
 
 	print(f"可训练参数: {trainable_params} ({trainable_params / all_params:.2%} of all parameters)")
 
