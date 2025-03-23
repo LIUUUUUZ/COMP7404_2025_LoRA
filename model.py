@@ -71,6 +71,11 @@ def load_model(args, num_labels):
 		model = configure_adapter(model, args)
 
 	elif args.method == "full_ft":
+		# 修改args中的学习率到Roberta large的合理值
+		if args.model_name == "roberta-large":
+			args.learning_rate = 1e-5
+		elif args.model_name == "roberta-base":
+			args.learning_rate = 2e-5
 		for param in model.parameters():
 			param.requires_grad = True
 		trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
