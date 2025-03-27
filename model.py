@@ -37,13 +37,14 @@ def load_model(args, num_labels):
 	
 	if args.method == "adapter":
 		model = AutoAdapterModel.from_pretrained(args.model_name)
+		# 添加分类头
 		model.add_classification_head(
 			head_name="task_head",
 			num_labels=num_labels
 		)
-		# 显式解冻分类头
-		for param in model.heads["task_head"].parameters():
-			param.requires_grad = False
+		if args.dataset != "stsb":
+			for param in model.heads["task_head"].parameters():
+				param.requires_grad = False
 
 	else:
 		model = AutoModelForSequenceClassification.from_pretrained(
@@ -59,6 +60,12 @@ def load_model(args, num_labels):
 
 		# 应用LoRA配置
 		model = get_peft_model(model, lora_config)
+
+		# 手动冻结所有未包含lora的module
+		if args.dataset != "stsb":
+			for name, param in model.named_parameters():
+				if "lora" not in name:
+					param.requires_grad = False
 
 		# 打印可训练参数信息
 		model.print_trainable_parameters()
@@ -317,7 +324,7 @@ def train(args, model, train_dataloader, eval_dataloader, metric_name):
 				best_metric = current_metric
 				output_dir = os.path.join(
 					args.output_dir,
-					f"{args.dataset}_{args.method}_rank{args.lora_rank if args.method == 'lora' else ''}"
+					f"{args.dataset}_{args.method}_rank{args.lora_rank if args.method == 'lora' else args.adapter_bottleneck if args.method == 'adapter' else ''}"
 				)
 				os.makedirs(output_dir, exist_ok=True)
 				model.save_pretrained(output_dir)
